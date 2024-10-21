@@ -1,2 +1,2 @@
+command! Themeinator lua require('myplugin').open_window()
 
-command ! Themeinator lua require('themeinator').open_window()
