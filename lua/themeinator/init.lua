@@ -3,7 +3,7 @@ local M = {}
 -- Default configuration
 local config = {
     themes_directory = "~/.config/nvim/themes",                                               -- Default themes directory
-    last_selected_theme_file = vim.fn.stdpath('config') .. "/lua/themeinator/last_theme.lua", -- Store the last selected theme
+    last_selected_theme_file = vim.fn.stdpath('config') .. "~/.config/nvim/themes/catppuccin-mocha.vim", -- Store the last selected theme
 }
 
 -- List of themes (items) to display in the window
@@ -50,7 +50,7 @@ local function apply_theme(theme_name)
         print("Theme not found: " .. theme_name)
         return
     end
-
+    print(theme_path)
     -- Add the theme directory to runtimepath and apply the colorscheme
     vim.opt.rtp:append(theme_path)
     vim.cmd("colorscheme " .. theme_name)
