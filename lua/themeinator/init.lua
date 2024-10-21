@@ -12,8 +12,8 @@ local buf, win_id
 
 -- Function to read the configuration file
 local function read_config()
-    -- Path to the user's config file for Themenator (e.g., ~/.config/nvim/lua/themenator/config.lua)
-    local user_config_path = vim.fn.stdpath('config') .. "/lua/themenator/config.lua"
+    -- Path to the user's config file for Themenator (e.g., ~/.config/nvim/lua/themeinator/config.lua)
+    local user_config_path = vim.fn.stdpath('config') .. "/lua/themeinator/config.lua"
     local ok, user_config = pcall(dofile, user_config_path)
 
     if ok and type(user_config) == "table" then
@@ -99,9 +99,9 @@ function M.open_window()
     update_window()
 
     -- Set key mappings for navigating and selecting
-    vim.api.nvim_buf_set_keymap(buf, "n", "j", ":lua require('themenator').move_down()<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "k", ":lua require('themenator').move_up()<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", ":lua require('themenator').select_item()<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "j", ":lua require('themeinator').move_down()<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "k", ":lua require('themeinator').move_up()<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", ":lua require('themeinator').select_item()<CR>", { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, "n", "q", ":q<CR>", { noremap = true, silent = true })
 
     -- Set highlight for the floating window
