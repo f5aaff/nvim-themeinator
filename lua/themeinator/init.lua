@@ -84,11 +84,10 @@ local function apply_theme(colorscheme_name)
             local path = full_path .. file
             local name = file:match("^(.*)%.%w+$")
             local extension = file:match("^.+(%..+)$")
-            if extension == "vim" then
+            if extension == ".vim" then
                 vim.notify("colorscheme set: " .. name)
+                vim.cmd("colorscheme " .. name)
                 return true
-                --vim.cmd("colorscheme " .. name)
-                --return true
             end
             local ok, err = pcall(dofile, path)
             if not ok then
