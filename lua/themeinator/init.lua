@@ -89,17 +89,17 @@ local function apply_theme(colorscheme_name)
                 vim.cmd("colorscheme " .. name)
                 return true
             end
-            local ok, err = pcall(dofile, path)
-            if not ok then
-                vim.notify("Error loading theme: " .. err, vim.log.levels.ERROR)
-                return false
-            end
-            config.last_selected_theme_file = path
-            local theme_to_apply = colorscheme_name:gsub("%.lua$", "")
-            vim.cmd("colorscheme " .. theme_to_apply)
+           -- local ok, err = pcall(dofile, path)
+           -- if not ok then
+           --     vim.notify("Error loading theme: " .. err, vim.log.levels.ERROR)
+           --     return false
+           -- end
+           -- config.last_selected_theme_file = path
+           -- local theme_to_apply = colorscheme_name:gsub("%.lua$", "")
+           -- vim.cmd("colorscheme " .. theme_to_apply)
 
-            vim.notify("Colorscheme set: " .. name)
-            return true
+           -- vim.notify("Colorscheme set: " .. name)
+           -- return true
         end
     end
 
