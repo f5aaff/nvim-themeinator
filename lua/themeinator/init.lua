@@ -2,7 +2,7 @@ local M = {}
 
 -- Default configuration
 local config = {
-    themes_directory = "$HOME/.config/nvim/themes", -- Default themes directory
+    themes_directory = "$HOME/.config/nvim/after/colors/", -- Default themes directory
     last_selected_theme_file = "",                  -- Store the last selected theme
 }
 
@@ -53,6 +53,7 @@ local function read_themes_from_directory()
     items = {}
     for _, file in ipairs(theme_files) do
         table.insert(items, file)
+        vim.opt.runtimepath:append(file)
     end
 
     if #items == 0 then
@@ -82,16 +83,24 @@ local function apply_theme(colorscheme_name)
         if colorscheme_name == file then
             local path = full_path .. file
             local name = file:match("^(.*)%.%w+$")
-           -- local extension = file:match("^.+(%..+)$")
-
-                local ok, err = pcall(dofile, path)
-                if not ok then
-                    vim.notify("Error loading theme: " .. err, vim.log.levels.ERROR)
-                    return false
-                end
-                vim.notify("Colorscheme set: " .. name)
+            local extension = file:match("^.+(%..+)$")
+            if extension == "vim" then
+                vim.notify("colorscheme set: " .. name)
                 return true
+                --vim.cmd("colorscheme " .. name)
+                --return true
+            end
+            local ok, err = pcall(dofile, path)
+            if not ok then
+                vim.notify("Error loading theme: " .. err, vim.log.levels.ERROR)
+                return false
+            end
+            config.last_selected_theme_file = path
+            local theme_to_apply = colorscheme_name:gsub("%.lua$", "")
+            vim.cmd("colorscheme " .. theme_to_apply)
 
+            vim.notify("Colorscheme set: " .. name)
+            return true
         end
     end
 
@@ -99,7 +108,6 @@ local function apply_theme(colorscheme_name)
     vim.notify("Colorscheme not found: " .. colorscheme_name, vim.log.levels.WARN)
     return false
 end
-
 
 -- Function to load the last saved theme on startup
 local function load_last_theme()
@@ -114,7 +122,7 @@ end
 
 -- Function to update the window to reflect the currently selected item
 local function update_window()
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, items)  -- Refresh the theme list
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, items) -- Refresh the theme list
 
     -- Clear previous highlighting
     vim.api.nvim_buf_clear_namespace(buf, -1, 0, -1)
@@ -127,7 +135,7 @@ end
 function M.move_down()
     if selected_item < #items then
         selected_item = selected_item + 1
-        update_window()  -- Ensure the window is updated when moving down
+        update_window() -- Ensure the window is updated when moving down
     end
 end
 
@@ -135,7 +143,7 @@ end
 function M.move_up()
     if selected_item > 1 then
         selected_item = selected_item - 1
-        update_window()  -- Ensure the window is updated when moving up
+        update_window() -- Ensure the window is updated when moving up
     end
 end
 
@@ -176,7 +184,11 @@ function M.open_window()
 
     vim.api.nvim_buf_set_keymap(buf, "n", "j", ":lua require('themeinator').move_down()<CR>",
         { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<DOWN>", ":lua require('themeinator').move_down()<CR>",
+        { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, "n", "k", ":lua require('themeinator').move_up()<CR>",
+        { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<UP>", ":lua require('themeinator').move_up()<CR>",
         { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", ":lua require('themeinator').select_item()<CR>",
         { noremap = true, silent = true })
