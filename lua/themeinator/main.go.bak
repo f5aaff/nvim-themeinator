@@ -8,42 +8,17 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/gocolly/colly"
 )
 
-type Theme struct {
-	Name       string `json:"name"`
-	Downloaded bool   `json:"downloaded"`
-	Link       string `json:"link"`
-	Path       string `json:"path"`
-}
 type known_themes struct {
-	Themes map[string]Theme `json:"themes"`
+	Theme_links []string `json:"theme_links"`
 }
 
 func main() {
-	known_themes_path := "/home/f/.config/nvim/lua/themeinator/known_themes.json"
-	// attempt to open existing known_themes,
-	// if it errors, or cannot be unmarshalled, instantiate a new kt struct.
-	kt := known_themes{Themes: make(map[string]Theme)}
-	kt_file, err := os.Open(known_themes_path)
-	if err != nil {
-		log.Printf("open known themes//os.open Error: %s", err.Error())
-	} else {
-		r, err := io.ReadAll(kt_file)
-
-		if err != nil {
-			log.Printf("open known themes//io.ReadAll Error: %s", err.Error())
-		} else {
-			err := json.Unmarshal(r, &kt)
-			if err != nil {
-				log.Printf("open known themes//json.Unmarshal Error: %s", err.Error())
-				kt = known_themes{}
-			}
-		}
-	}
 	// initiate colly collector, pointed at vimcolorschemes .vim top results
 	c := colly.NewCollector()
 	themeCollector := c.Clone()
@@ -76,23 +51,38 @@ func main() {
 		href := e.Attr("href")
 		author := e.Request.Ctx.Get("author")
 		theme := e.Request.Ctx.Get("theme")
-		if href == fmt.Sprintf("https://github.com/%s/%s", author, theme) {
+
+		if href == fmt.Sprintf("https:// github.com/%s/%s", author, theme) {
 			log.Print("Found GitHub link:", href)
-			_ = GetColors(&kt, href)
+			_ = GetColors(href)
 			// Visit the GitHub link
 			_ = e.Request.Visit(href)
 		}
 	})
-	err = c.Visit("https://vimcolorschemes.com/i/top/e.vim")
+	err := c.Visit("https:// vimcolorschemes.com/i/top/e.vim")
 	if err != nil {
 		log.Print("err:", err)
 	}
 
-	//downloadAllThemes(kt, "/home/f/.config/nvim/colors/testing")
+	kt := known_themes{}
+	known_theme_file, err := os.Open("/home/f/.config/nvim/lua/themeinator/known_themes.json")
+	if err != nil {
+		return
+	}
+	r, err := io.ReadAll(known_theme_file)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(r, &kt)
+	if err != nil {
+		return
+	}
+	downloadAllThemes(kt, "/home/f/.config/nvim/colors/testing")
 }
 
-func GetColors(kt *known_themes, ghLink string) error {
+func GetColors(ghLink string) error {
 
+	kt := known_themes{}
 	// pull the author and theme name from the repo link
 	parts := strings.Split(strings.Trim(ghLink, "/"), "/")
 	if len(parts) < 2 {
@@ -135,31 +125,10 @@ func GetColors(kt *known_themes, ghLink string) error {
 			// Construct the raw GitHub URL
 			rawURL := strings.Replace(fileLink, "/blob/", "/raw/", 1)
 			rawURL = e.Request.AbsoluteURL(rawURL)
+			if !slices.Contains(kt.Theme_links, rawURL) {
 
-			// grab the name of the theme
-			name := strings.Split(fileName, ".")[0]
-
-			// if the theme isn't in the known themes map,
-			// create a new Theme struct and add it
-			_, ok := kt.Themes[name]
-			if !ok {
-				log.Printf("name: %s", name)
-				t := Theme{
-					Name:       name,
-					Path:       "",
-					Link:       rawURL,
-					Downloaded: false,
-				}
-				kt.Themes[name] = t
+				kt.Theme_links = append(kt.Theme_links, rawURL)
 			}
-
-			// if it is in the map, but the link is old, update it
-			if ok && kt.Themes[name].Link != rawURL {
-				t := kt.Themes[name]
-				t.Link = rawURL
-				kt.Themes[name] = t
-			}
-
 			log.Printf("Found .vim file: %s\nRaw URL: %s\n", fileName, rawURL)
 		}
 	})
@@ -171,8 +140,8 @@ func GetColors(kt *known_themes, ghLink string) error {
 		return err
 	}
 
-	// write known theme links to file, if the map has any items
-	if len(kt.Themes) > 1 {
+	// write known theme links to file
+	if len(kt.Theme_links) > 1 {
 		b, err := json.Marshal(kt)
 		if err != nil {
 			log.Print("ERROR: ", err.Error())
@@ -191,7 +160,7 @@ func GetColors(kt *known_themes, ghLink string) error {
 	return nil
 }
 
-func DownloadColourScheme(theme *Theme, dest string) error {
+func DownloadColourScheme(link, dest string) error {
 
 	// create the file at the given destination
 	out, err := os.Create(dest)
@@ -202,7 +171,7 @@ func DownloadColourScheme(theme *Theme, dest string) error {
 	// defer closing the file struct to prevent it closing in the event of a large file
 	defer out.Close()
 
-	resp, err := http.Get(theme.Link)
+	resp, err := http.Get(link)
 	if err != nil {
 		return err
 	}
@@ -219,22 +188,21 @@ func DownloadColourScheme(theme *Theme, dest string) error {
 		return err
 	}
 
-	theme.Downloaded = true
-	theme.Path = dest
 	return nil
 }
 
 func downloadAllThemes(kt known_themes, colours_dir string) {
-	for _, theme := range kt.Themes {
-		// check for a valid DL link
-		parts := strings.Split(strings.Trim(theme.Link, "/"), "/")
+	for _, theme := range kt.Theme_links {
+		parts := strings.Split(strings.Trim(theme, "/"), "/")
 		if len(parts) < 2 {
 			continue
 		}
 
-		fullPath := colours_dir + "/" + theme.Name
-		log.Printf("Downloading %s colorscheme: %s", theme.Name, theme.Path)
-		err := DownloadColourScheme(&theme, fullPath)
+		// split out the theme name
+		themeName := parts[len(parts)-1]
+		fullPath := colours_dir + "/" + themeName
+		log.Printf("Downloading %s colorscheme: %s", themeName, theme)
+		err := DownloadColourScheme(theme, fullPath)
 		if err != nil {
 			log.Printf("DOWNLOAD ERROR: %s", err.Error())
 		}
