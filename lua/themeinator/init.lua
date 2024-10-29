@@ -130,6 +130,16 @@ local function update_window()
     vim.api.nvim_buf_add_highlight(buf, -1, "Visual", selected_item - 1, 0, -1)
 end
 
+local title_win_id
+-- Function to close both main and title windows
+function M.close_window()
+    if win_id and vim.api.nvim_win_is_valid(win_id) then
+        vim.api.nvim_win_close(win_id, true)
+    end
+    if title_win_id and vim.api.nvim_win_is_valid(title_win_id) then
+        vim.api.nvim_win_close(title_win_id, true)
+    end
+end
 -- Function to move the selection down
 function M.move_down()
     if selected_item < #items then
@@ -150,9 +160,9 @@ end
 function M.select_item()
     vim.api.nvim_win_close(win_id, true)
     apply_theme(items[selected_item])
+    M.close_window()
 end
 
-local title_win_id
 -- Function to create a title bar window
 local function create_title_window(title, main_win_config)
     local title_buf = vim.api.nvim_create_buf(false, true)
@@ -226,6 +236,7 @@ function M.open_window()
     --vim.api.nvim_buf_set_keymap(buf, "n", "q", ":q<CR>", { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ":lua require('themeinator').close_window()<CR>",
         { noremap = true, silent = true })
+---@diagnostic disable-next-line: deprecated
     vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:NormalFloat,FloatBorder:FloatBorder')
 
     vim.cmd [[
@@ -234,15 +245,6 @@ function M.open_window()
     ]]
 end
 
--- Function to close both main and title windows
-function M.close_window()
-    if win_id and vim.api.nvim_win_is_valid(win_id) then
-        vim.api.nvim_win_close(win_id, true)
-    end
-    if title_win_id and vim.api.nvim_win_is_valid(title_win_id) then
-        vim.api.nvim_win_close(title_win_id, true)
-    end
-end
 
 -- Load the last saved theme when Neovim starts
 function M.load_last_theme_on_startup()
