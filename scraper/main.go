@@ -25,25 +25,28 @@ type known_themes struct {
 
 func main() {
 	known_themes_path := "/home/f/.config/nvim/lua/themeinator/known_themes.json"
+
 	// attempt to open existing known_themes,
 	// if it errors, or cannot be unmarshalled, instantiate a new kt struct.
 	kt := known_themes{Themes: make(map[string]Theme)}
+
 	kt_file, err := os.Open(known_themes_path)
 	if err != nil {
 		log.Printf("open known themes//os.open Error: %s", err.Error())
 	} else {
 		r, err := io.ReadAll(kt_file)
-
 		if err != nil {
 			log.Printf("open known themes//io.ReadAll Error: %s", err.Error())
 		} else {
 			err := json.Unmarshal(r, &kt)
 			if err != nil {
 				log.Printf("open known themes//json.Unmarshal Error: %s", err.Error())
-				kt = known_themes{}
 			}
 		}
 	}
+
+	defer kt_file.Close()
+
 	// initiate colly collector, pointed at vimcolorschemes .vim top results
 	c := colly.NewCollector()
 	themeCollector := c.Clone()
@@ -88,7 +91,12 @@ func main() {
 		log.Print("err:", err)
 	}
 
-	//downloadAllThemes(kt, "/home/f/.config/nvim/colors/testing")
+	// uncomment to download a single theme
+//	t := kt.Themes["two-firewatch"]
+//	err = DownloadColourScheme(&t)
+//	if err != nil {
+//		log.Printf("error downloading colour scheme: %s",err.Error())
+//	}
 }
 
 func GetColors(kt *known_themes, ghLink string) error {
@@ -143,7 +151,6 @@ func GetColors(kt *known_themes, ghLink string) error {
 			// create a new Theme struct and add it
 			_, ok := kt.Themes[name]
 			if !ok {
-				log.Printf("name: %s", name)
 				t := Theme{
 					Name:       name,
 					Path:       "",
@@ -181,6 +188,7 @@ func GetColors(kt *known_themes, ghLink string) error {
 		if err != nil {
 			log.Print("ERROR: ", err.Error())
 		}
+		defer themes_file.Close()
 
 		_, err = io.Writer.Write(themes_file, b)
 		if err != nil {
@@ -191,8 +199,14 @@ func GetColors(kt *known_themes, ghLink string) error {
 	return nil
 }
 
-func DownloadColourScheme(theme *Theme, dest string) error {
+func DownloadColourScheme(theme *Theme) error {
 
+	// check for a valid DL link
+	if !strings.HasSuffix(theme.Link,theme.Name+".vim") {
+		return errors.New("invalid link"+theme.Link)
+	}
+	log.Printf("DOWNLOADING: %s",theme.Name)
+	dest := fmt.Sprintf("/home/f/.config/nvim/colors/%s.vim",theme.Name)
 	// create the file at the given destination
 	out, err := os.Create(dest)
 	if err != nil {
@@ -226,15 +240,10 @@ func DownloadColourScheme(theme *Theme, dest string) error {
 
 func downloadAllThemes(kt known_themes, colours_dir string) {
 	for _, theme := range kt.Themes {
-		// check for a valid DL link
-		parts := strings.Split(strings.Trim(theme.Link, "/"), "/")
-		if len(parts) < 2 {
-			continue
-		}
 
-		fullPath := colours_dir + "/" + theme.Name
-		log.Printf("Downloading %s colorscheme: %s", theme.Name, theme.Path)
-		err := DownloadColourScheme(&theme, fullPath)
+		//fullPath := colours_dir + "/" + theme.Name
+		log.Printf("Downloading %s", theme.Name)
+		err := DownloadColourScheme(&theme)
 		if err != nil {
 			log.Printf("DOWNLOAD ERROR: %s", err.Error())
 		}
