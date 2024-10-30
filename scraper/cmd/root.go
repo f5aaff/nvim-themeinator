@@ -6,11 +6,11 @@ package cmd
 
 import (
 	"os"
-
+	"themeinator/cmd/libfuncs"
 	"github.com/spf13/cobra"
 )
 
-
+var kt = libfuncs.Known_themes{Themes : make(map[string]libfuncs.Theme)}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -36,6 +36,7 @@ func Execute() {
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.AddCommand(&getColoursCmd)
+	rootCmd.AddCommand(&DownloadColoursCmd)
 }
 
 
