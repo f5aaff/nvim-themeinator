@@ -33,7 +33,6 @@ end
 local function read_config()
     local user_config_path = vim.fn.stdpath('config') .. "/lua/themeinator/config.lua"
     local ok, user_config = pcall(dofile, user_config_path)
-
     if ok and type(user_config) == "table" then
         config = vim.tbl_extend("force", config, user_config)
     end
@@ -62,6 +61,16 @@ local function read_themes_from_directory()
 end
 
 
+local function save_table_to_file(tbl, path)
+    local f = io.open(path, "w")
+    if not f then
+        error("failed to write to", path)
+    end
+    local inspect = require("vim.inspect")
+    f:write("return " .. inspect(tbl))
+    f:close()
+end
+
 -- Function to evaluate and load the colorscheme if it matches a file in the folder
 local function apply_theme(colorscheme_name)
     -- Expand the folder path
@@ -87,19 +96,11 @@ local function apply_theme(colorscheme_name)
             if extension == ".vim" then
                 vim.notify("colorscheme set: " .. name)
                 vim.cmd("colorscheme " .. name)
+                config.last_selected_theme_file = name..extension
+                local user_config_path = vim.fn.stdpath('config') .. "/lua/themeinator/config.lua"
+                save_table_to_file(config,user_config_path)
                 return true
             end
-            -- local ok, err = pcall(dofile, path)
-            -- if not ok then
-            --     vim.notify("Error loading theme: " .. err, vim.log.levels.ERROR)
-            --     return false
-            -- end
-            -- config.last_selected_theme_file = path
-            -- local theme_to_apply = colorscheme_name:gsub("%.lua$", "")
-            -- vim.cmd("colorscheme " .. theme_to_apply)
-
-            -- vim.notify("Colorscheme set: " .. name)
-            -- return true
         end
     end
 
@@ -110,8 +111,9 @@ end
 
 -- Function to load the last saved theme on startup
 local function load_last_theme()
-    local ok, last_theme = pcall(dofile, config.last_selected_theme_file)
-    if ok and (last_theme ~= "") then
+    read_config()
+    local last_theme = config.last_selected_theme_file
+    if last_theme ~= "" then
         apply_theme(last_theme)
     else
         print("No saved theme found, loading default theme.")
@@ -140,6 +142,7 @@ function M.close_window()
         vim.api.nvim_win_close(title_win_id, true)
     end
 end
+
 -- Function to move the selection down
 function M.move_down()
     if selected_item < #items then
@@ -236,7 +239,7 @@ function M.open_window()
     --vim.api.nvim_buf_set_keymap(buf, "n", "q", ":q<CR>", { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ":lua require('themeinator').close_window()<CR>",
         { noremap = true, silent = true })
----@diagnostic disable-next-line: deprecated
+    ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:NormalFloat,FloatBorder:FloatBorder')
 
     vim.cmd [[
@@ -244,7 +247,6 @@ function M.open_window()
         highlight FloatBorder guifg=#5e81ac guibg=#1e222a
     ]]
 end
-
 
 -- Load the last saved theme when Neovim starts
 function M.load_last_theme_on_startup()
