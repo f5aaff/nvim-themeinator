@@ -50,14 +50,3 @@ func DownloadColourScheme(kt *Known_themes,theme_name string) error {
 	kt.Themes[theme_name] = theme
 	return nil
 }
-
-
-//
-//func downloadAllThemes(kt Known_themes, colours_dir string) {
-//	for _, theme := range kt.Themes {
-//		err := DownloadColourScheme(&kt,theme.Name)
-//		if err != nil {
-//			return
-//		}
-//	}
-//}
