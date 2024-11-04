@@ -16,7 +16,6 @@ function M.add_folder_to_runtimepath(folder_path)
 
     -- Add the folder to Neovim's runtime path
     vim.opt.runtimepath:append(full_path)
-    vim.notify("Added to runtimepath: " .. full_path)
 
     return true
 end
@@ -37,7 +36,7 @@ end
 function M.save_table_to_file(tbl, path)
     local f = io.open(path, "w")
     if not f then
-        error("failed to write to", path)
+        error("failed to write to".. path)
     end
     local inspect = require("vim.inspect")
     f:write("return " .. inspect(tbl))

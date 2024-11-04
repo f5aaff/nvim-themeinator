@@ -1,63 +1,151 @@
 local M = {}
 
 local thememan = require('themeinator.thememan')
-local util = require('themeinator.util')
-
 
 local selected_item = 1
 local buf, win_id
 
--- Function to open a floating input window for user input
-function M.open_floating_input()
-    -- Set dimensions and position for the floating window
-    local width = 40
-    local height = 3
-    local row = math.floor((vim.o.lines - height) / 2 - 1)
-    local col = math.floor((vim.o.columns - width) / 2)
+local input_buf, input_win_id, result_buf, result_win_id
+local selected_index = 1 -- Keeps track of the currently selected item
 
-    -- Create a buffer for the floating window
-    buf = vim.api.nvim_create_buf(false, true) -- (listed, scratch)
+-- Function to open the main input window for filtering items
+function M.open_search_window(items, on_select)
+    selected_index = 1 -- Reset selection index each time the window opens
 
-    -- Configure the floating window options
-    local opts = {
+    -- Create a buffer for the input window
+    input_buf = vim.api.nvim_create_buf(false, true)
+
+    local width, height = 40, 3
+    local row, col = math.floor((vim.o.lines - height) / 2 - 1), math.floor((vim.o.columns - width) / 2)
+
+    input_win_id = vim.api.nvim_open_win(input_buf, true, {
         style = "minimal",
         relative = "editor",
         width = width,
         height = height,
         row = row,
         col = col,
-        border = "rounded",
-    }
+        border = "rounded"
+    })
 
-    -- Open the floating window with the buffer
-    local win = vim.api.nvim_open_win(buf, true, opts)
+    -- Set options for the buffer
+    vim.api.nvim_buf_set_option(input_buf, "bufhidden", "wipe")
+    vim.api.nvim_buf_set_option(input_buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(input_buf, 0, -1, false, { "" })
 
-    -- Set some options for the buffer
----@diagnostic disable-next-line: deprecated
-    vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
----@diagnostic disable-next-line: deprecated
-    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    -- Autocommand to filter and update results on every text change
+    vim.api.nvim_create_autocmd("TextChangedI", {
+        buffer = input_buf,
+        callback = function() M.update_results(items) end
+    })
 
-    -- Set an initial prompt message
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Enter input:" })
+    -- Key mappings for navigation and selection
+    vim.api.nvim_buf_set_keymap(input_buf, "i", "<Down>", "<Cmd>lua require('themeinator.ui').move_selection(1)<CR>",
+        { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(input_buf, "i", "<Up>", "<Cmd>lua require('themeinator.ui').move_selection(-1)<CR>",
+        { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(input_buf, "i", "<CR>",
+        "<Cmd>lua require('themeinator.ui').select_current_item(" .. vim.inspect(on_select) .. ")<CR>",
+        { noremap = true, silent = true })
+end
 
-    -- Capture input on Enter
-    vim.api.nvim_buf_set_keymap(buf, 'n', '<CR>', [[:lua handle_input() <CR>]], { noremap = true, silent = true })
-
-    -- Close the window if Esc is pressed
-    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', [[<Cmd>lua vim.api.nvim_win_close(0, true)<CR>]], { noremap = true, silent = true })
-
-    -- Function to handle the input
-    _G.handle_input = function()
-        local input = vim.api.nvim_get_current_line()
-        print("You entered:", input)  -- Handle input as needed
-        vim.api.nvim_win_close(win, true) -- Close the floating window
+-- Function to update the filtered results based on input
+function M.update_results(items)
+    local query = vim.api.nvim_get_current_line()
+    local filtered_items = {}
+    if query ~= "" then
+        -- Filter items based on query
+        for _, item in ipairs(items) do
+            if item:lower():match(query:lower()) then
+                table.insert(filtered_items, item)
+            end
+        end
+    else
+        for _, item in ipairs(items) do
+            table.insert(filtered_items, item)
+        end
     end
+    -- Reset selected index if results have changed
+    selected_index = 1
+
+    -- Show results in the results window
+    M.show_results(filtered_items)
+end
+
+-- Function to display filtered items in a floating results window
+function M.show_results(filtered_items)
+    -- Close previous results window if it exists
+    if result_win_id and vim.api.nvim_win_is_valid(result_win_id) then
+        vim.api.nvim_win_close(result_win_id, true)
+    end
+
+    -- Set the height to at least 1 or up to a maximum of 10 lines
+    local result_height = math.max(math.min(#filtered_items, 10), 1)
+
+    -- Create a buffer and window for results if needed
+    result_buf = vim.api.nvim_create_buf(false, true)
+    result_win_id = vim.api.nvim_open_win(result_buf, false, {
+        style = "minimal",
+        relative = "editor",
+        width = 40,
+        height = result_height,
+        row = math.floor((vim.o.lines - 1) / 2) + 2,
+        col = math.floor((vim.o.columns - 40) / 2),
+        border = "rounded",
+    })
+
+    -- Display filtered items in the result buffer
+    if #filtered_items == 0 then
+        vim.api.nvim_buf_set_lines(result_buf, 0, -1, false, { "No matches found" })
+    else
+        vim.api.nvim_buf_set_lines(result_buf, 0, -1, false, filtered_items)
+    end
+
+    -- Highlight the currently selected item
+    M.highlight_selected_item()
+end
+
+-- Function to highlight the currently selected item in the results
+function M.highlight_selected_item()
+    vim.api.nvim_buf_clear_namespace(result_buf, -1, 0, -1)
+    vim.api.nvim_buf_add_highlight(result_buf, -1, "Visual", selected_index - 1, 0, -1)
+end
+
+-- Function to move selection up or down
+function M.move_selection(direction)
+    local line_count = vim.api.nvim_buf_line_count(result_buf)
+
+    -- Update selected_index based on direction, clamping within bounds
+    selected_index = math.max(1, math.min(selected_index + direction, line_count))
+
+    -- Update the visual highlight
+    M.highlight_selected_item()
+end
+
+-- Function to handle selecting the currently highlighted item
+function M.select_current_item()
+    -- Get the selected line's text
+    local selected = vim.api.nvim_buf_get_lines(result_buf, selected_index - 1, selected_index, false)[1]
+
+    local config = require("themeinator.init").get_config()
+    vim.api.nvim_win_close(win_id, true)
+    thememan.apply_theme(config, config.config_path, selected)
+    M.close_window()
 end
 
 -- Function to update the window to reflect the currently selected item
 local function update_window(items)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, items) -- Refresh the theme list
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then
+        print("Buffer is not valid")
+        return
+    end
+    -- Ensure items list is valid
+    if not items or #items == 0 then
+        items = { "No themes found." .. #items }
+    end
+
+    -- Set the theme items in the buffer
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, items)
 
     -- Clear previous highlighting
     vim.api.nvim_buf_clear_namespace(buf, -1, 0, -1)
@@ -67,13 +155,20 @@ local function update_window(items)
 end
 
 local title_win_id
--- Function to close both main and title windows
+
+---- Function to close both main and title windows
 function M.close_window()
     if win_id and vim.api.nvim_win_is_valid(win_id) then
         vim.api.nvim_win_close(win_id, true)
     end
     if title_win_id and vim.api.nvim_win_is_valid(title_win_id) then
         vim.api.nvim_win_close(title_win_id, true)
+    end
+    if input_win_id and vim.api.nvim_win_is_valid(input_win_id) then
+        vim.api.nvim_win_close(input_win_id, true)
+    end
+    if result_win_id and vim.api.nvim_win_is_valid(result_win_id) then
+        vim.api.nvim_win_close(result_win_id, true)
     end
 end
 
@@ -95,8 +190,9 @@ end
 
 -- Function to select and apply the current theme
 function M.select_item(items)
+    local config = require("themeinator.init").get_config()
     vim.api.nvim_win_close(win_id, true)
-thememan.apply_theme(items[selected_item])
+    thememan.apply_theme(config, config.config_path, items[selected_item])
     M.close_window()
 end
 
@@ -118,18 +214,24 @@ local function create_title_window(title, main_win_config)
 end
 
 -- Function to open the floating window with the selectable list of themes
-function M.open_window(config_path,items,config)
-    util.read_config(config_path)
-    thememan.read_themes_from_directory(items,config)
-
+function M.open_window(items)
     buf = vim.api.nvim_create_buf(false, true)
+
+    if not buf then
+        print("Failed to create buffer")
+        return
+    end
+
+    -- Ensure items is a non-empty list
+    if not items or #items == 0 then
+        items = { "No themes found." .. #items } -- Default message if items is empty
+    end
 
     ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_buf_set_option(buf, 'modifiable', true)
 
     ---@diagnostic disable-next-line: deprecated
     local width = vim.api.nvim_get_option("columns")
-
     ---@diagnostic disable-next-line: deprecated
     local height = vim.api.nvim_get_option("lines")
 
@@ -138,6 +240,8 @@ function M.open_window(config_path,items,config)
 
     local row = math.ceil((height - win_height) / 2)
     local col = math.ceil((width - win_width) / 2)
+
+    -- Create the main floating window
     win_id = vim.api.nvim_open_win(buf, true, {
         relative = "editor",
         width = win_width,
@@ -148,8 +252,16 @@ function M.open_window(config_path,items,config)
         border = "rounded"
     })
 
+    -- Check if win_id is valid
+    if not win_id then
+        print("Failed to create window")
+        return
+    end
+
+    -- Update the window with theme items
     update_window(items)
-    -- Main floating window configuration
+
+    -- Configuration for creating title window
     local main_win_config = {
         relative = "editor",
         width = win_width,
@@ -160,29 +272,27 @@ function M.open_window(config_path,items,config)
         border = "rounded"
     }
     create_title_window("themeinator", main_win_config)
-    vim.api.nvim_buf_set_keymap(buf, "n", "j", ":lua require('themeinator').move_down()<CR>",
+
+    -- Key mappings for navigation and selection
+    vim.api.nvim_buf_set_keymap(buf, "n", "j",
+        ":lua require('themeinator.ui').move_down(" .. vim.inspect(items) .. ")<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<DOWN>",
+        ":lua require('themeinator.ui').move_down(" .. vim.inspect(items) .. ")<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "k", ":lua require('themeinator.ui').move_up(" .. vim.inspect(items) .. ")<CR>",
         { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<DOWN>", ":lua require('themeinator').move_down()<CR>",
+    vim.api.nvim_buf_set_keymap(buf, "n", "<UP>",
+        ":lua require('themeinator.ui').move_up(" .. vim.inspect(items) .. ")<CR>", { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>",
+        ":lua require('themeinator.ui').select_item(" .. vim.inspect(items) .. ")<CR>", { noremap = true, silent = true })
+
+    vim.api.nvim_set_keymap("n", "s",
+        ":lua require('themeinator.ui').open_search_window(" .. vim.inspect(items) .. ")<CR>",
         { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "k", ":lua require('themeinator').move_up()<CR>",
-        { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<UP>", ":lua require('themeinator').move_up()<CR>",
-        { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", ":lua require('themeinator').select_item()<CR>",
+    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ":lua require('themeinator.ui').close_window()<CR>",
         { noremap = true, silent = true })
 
--- Set up the key mapping for 's' in normal mode
-    vim.api.nvim_set_keymap("n", "s", ":lua require('themeinator').open_floating_input()<CR>", { noremap = true, silent = true })
-    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ":lua require('themeinator').close_window()<CR>",
-        { noremap = true, silent = true })
     ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:NormalFloat,FloatBorder:FloatBorder')
-
-    vim.cmd [[
-        highlight NormalFloat guibg=#1e222a
-        highlight FloatBorder guifg=#5e81ac guibg=#1e222a
-    ]]
 end
---
 
 return M
