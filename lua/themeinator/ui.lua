@@ -11,7 +11,6 @@ local selected_index = 1 -- Keeps track of the currently selected item
 -- Function to open the main input window for filtering items
 function M.open_search_window(items, on_select)
     selected_index = 1 -- Reset selection index each time the window opens
-
     -- Create a buffer for the input window
     input_buf = vim.api.nvim_create_buf(false, true)
 
@@ -148,6 +147,7 @@ function M.select_current_item()
     local config = require("themeinator.init").get_config()
     vim.api.nvim_win_close(win_id, true)
     thememan.apply_theme(config, config.config_path, selected)
+    thememan.get_known_themes(config)
     M.close_window()
 end
 

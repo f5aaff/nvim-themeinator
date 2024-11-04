@@ -1,6 +1,6 @@
 local M = {}
 local util = require("themeinator.util")
-
+local json = require("themeinator.json")
 
 -- Function to read the themes from the directory
 function M.read_themes_from_directory(config)
@@ -31,6 +31,18 @@ function M.read_themes_from_directory(config)
 
     return items
 end
+
+function M.get_known_themes(config)
+    local kt_path = vim.fn.expand(config.known_themes)
+    local known_themes = json.load_json_from_file(kt_path)
+    if known_themes then
+        print(vim.inspect(known_themes))
+        return known_themes
+    else
+        return nil
+    end
+end
+
 
 -- Function to evaluate and load the colorscheme if it matches a file in the folder
 function M.apply_theme(config, config_path, colorscheme_name)

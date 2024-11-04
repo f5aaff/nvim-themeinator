@@ -9,7 +9,8 @@ local config_path = "/home/f/.config/nvim/lua/themeinator/config.lua"
 local config = {
     themes_directory = "$HOME/.config/nvim/colors/", -- Default themes directory
     last_selected_theme_file = "",                   -- Store the last selected theme
-    config_path = "/home/f/.config/nvim/lua/themeinator/config.lua"
+    config_path = "/home/f/.config/nvim/lua/themeinator/config.lua",
+    known_themes = "/home/f/.config/nvim/lua/themeinator/known_themes.json"
 }
 
 function M.read_config()
