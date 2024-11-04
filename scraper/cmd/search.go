@@ -20,7 +20,7 @@ var searchCmd = cobra.Command{
 		if err != nil {
 			fmt.Println("error:",err.Error())
 		}
-		err = libfuncs.Populate_kt(&kt,&args[0])
+		err = libfuncs.Populate_kt(&kt,args[0])
 		if err != nil {
 			fmt.Println("error:", err.Error())
 		}

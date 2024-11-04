@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func Populate_kt(kt *Known_themes,search_query *string) error {
+func Populate_kt(kt *Known_themes,search_query string) error {
 	themes_recorded := 0
 	// initiate colly collector, pointed at vimcolorschemes .vim top results
 	c := colly.NewCollector()
@@ -48,8 +48,8 @@ func Populate_kt(kt *Known_themes,search_query *string) error {
 		}
 	})
 	colorSchemesURL := "https://vimcolorschemes.com/i/top/e.vim"
-	if search_query != nil || *search_query != "" {
-		colorSchemesURL = fmt.Sprintf("%s/s.%s",colorSchemesURL,*search_query)
+	 if search_query != "" {
+		colorSchemesURL = fmt.Sprintf("%s/s.%s",colorSchemesURL,search_query)
 	}
 	err := c.Visit(colorSchemesURL)
 	if err != nil {

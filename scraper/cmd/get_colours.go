@@ -18,7 +18,7 @@ var getColoursCmd = cobra.Command{
 		if err != nil {
 			fmt.Println("error:",err.Error())
 		}
-		err = libfuncs.Populate_kt(&kt,nil)
+		err = libfuncs.Populate_kt(&kt,"")
 		if err != nil {
 			fmt.Println("error:", err.Error())
 		}
