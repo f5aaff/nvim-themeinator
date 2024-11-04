@@ -29,7 +29,9 @@ function M.open_search_window(items, on_select)
     })
 
     -- Set options for the buffer
+    ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_buf_set_option(input_buf, "bufhidden", "wipe")
+    ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_buf_set_option(input_buf, "modifiable", true)
     vim.api.nvim_buf_set_lines(input_buf, 0, -1, false, { "" })
 
@@ -46,6 +48,12 @@ function M.open_search_window(items, on_select)
         { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(input_buf, "i", "<CR>",
         "<Cmd>lua require('themeinator.ui').select_current_item(" .. vim.inspect(on_select) .. ")<CR>",
+        { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(input_buf, "i", "<Esc>",
+        "<Cmd>lua require('themeinator.ui').close_window()<CR>",
+        { noremap = true, silent = true })
+    vim.api.nvim_buf_set_keymap(input_buf, "n", "<Esc>",
+        "<Cmd>lua require('themeinator.ui').close_window()<CR>",
         { noremap = true, silent = true })
 end
 
@@ -79,18 +87,28 @@ function M.show_results(filtered_items)
         vim.api.nvim_win_close(result_win_id, true)
     end
 
-    -- Set the height to at least 1 or up to a maximum of 10 lines
-    local result_height = math.max(math.min(#filtered_items, 10), 1)
+    ---@diagnostic disable-next-line: deprecated
+    vim.api.nvim_buf_set_option(buf, 'modifiable', true)
 
+    ---@diagnostic disable-next-line: deprecated
+    local width = vim.api.nvim_get_option("columns")
+    ---@diagnostic disable-next-line: deprecated
+    local height = vim.api.nvim_get_option("lines")
+
+    local win_width = math.ceil(width * 0.5)
+    local win_height = math.ceil(height * 0.3)
+
+    local row = math.ceil((height - win_height) / 2)
+    local col = math.ceil((width - win_width) / 2)
     -- Create a buffer and window for results if needed
     result_buf = vim.api.nvim_create_buf(false, true)
     result_win_id = vim.api.nvim_open_win(result_buf, false, {
         style = "minimal",
         relative = "editor",
-        width = 40,
-        height = result_height,
-        row = math.floor((vim.o.lines - 1) / 2) + 2,
-        col = math.floor((vim.o.columns - 40) / 2),
+        width = win_width,
+        height = win_height,
+        row = row,
+        col = col,
         border = "rounded",
     })
 
