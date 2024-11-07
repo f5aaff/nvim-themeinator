@@ -3,11 +3,13 @@ package libfuncs
 import (
 	"errors"
 	"fmt"
-	"github.com/gocolly/colly"
+	"os"
 	"strings"
+
+	"github.com/gocolly/colly"
 )
 
-func Populate_kt(kt *Known_themes,search_query string) error {
+func Populate_kt(kt *Known_themes, search_query string) error {
 	themes_recorded := 0
 	// initiate colly collector, pointed at vimcolorschemes .vim top results
 	c := colly.NewCollector()
@@ -42,14 +44,14 @@ func Populate_kt(kt *Known_themes,search_query string) error {
 		if href == fmt.Sprintf("https://github.com/%s/%s", author, theme) {
 			_ = GetColors(kt, href)
 			themes_recorded++
-			fmt.Printf("themes grabbed:%d\r",themes_recorded)
+			fmt.Printf("themes grabbed:%d\r", themes_recorded)
 			// Visit the GitHub link
 			_ = e.Request.Visit(href)
 		}
 	})
 	colorSchemesURL := "https://vimcolorschemes.com/i/top/e.vim"
-	 if search_query != "" {
-		colorSchemesURL = fmt.Sprintf("%s/s.%s",colorSchemesURL,search_query)
+	if search_query != "" {
+		colorSchemesURL = fmt.Sprintf("%s/s.%s", colorSchemesURL, search_query)
 	}
 	err := c.Visit(colorSchemesURL)
 	if err != nil {
@@ -58,6 +60,13 @@ func Populate_kt(kt *Known_themes,search_query string) error {
 	return nil
 }
 
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return err == nil
+}
 func GetColors(kt *Known_themes, ghLink string) error {
 
 	// pull the author and theme name from the repo link
@@ -107,7 +116,8 @@ func GetColors(kt *Known_themes, ghLink string) error {
 
 			// if the theme isn't in the known themes map,
 			// create a new Theme struct and add it
-			_, ok := kt.Themes[name]
+			path := "/home/f/.config/nvim/colors/" + name + ".vim"
+			t, ok := kt.Themes[name]
 			if !ok {
 				t := Theme{
 					Name:       name,
@@ -115,13 +125,29 @@ func GetColors(kt *Known_themes, ghLink string) error {
 					Link:       rawURL,
 					Downloaded: false,
 				}
+				exists := fileExists(path)
+				if exists {
+					t.Downloaded = true
+					t.Path = path
+					kt.Themes[name] = t
+				}
 				kt.Themes[name] = t
 			}
-
+			exists := fileExists(path)
+			if exists {
+				t.Downloaded = true
+				t.Path = path
+				kt.Themes[name] = t
+			}
 			// if it is in the map, but the link is old, update it
 			if ok && kt.Themes[name].Link != rawURL {
 				t := kt.Themes[name]
 				t.Link = rawURL
+				exists := fileExists(path)
+				if exists {
+					t.Downloaded = true
+					t.Path = path
+				}
 				kt.Themes[name] = t
 			}
 		}
@@ -139,4 +165,3 @@ func GetColors(kt *Known_themes, ghLink string) error {
 
 	return nil
 }
-

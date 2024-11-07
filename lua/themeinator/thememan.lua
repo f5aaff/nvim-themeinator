@@ -34,9 +34,8 @@ end
 
 function M.get_known_themes(config)
     local kt_path = vim.fn.expand(config.known_themes)
-    local known_themes = json.load_json_from_file(kt_path)
+    local known_themes = util.decode_json_file(kt_path)
     if known_themes then
-        print(vim.inspect(known_themes))
         return known_themes
     else
         return nil
@@ -54,7 +53,6 @@ function M.apply_theme(config, config_path, colorscheme_name)
         vim.notify("Directory does not exist: " .. full_path, vim.log.levels.ERROR)
         return false
     end
-
     -- Get the list of theme files in the directory
     local theme_files = vim.fn.readdir(full_path)
 

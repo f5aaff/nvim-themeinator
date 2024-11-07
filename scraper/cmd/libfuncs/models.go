@@ -53,6 +53,9 @@ func (k *Known_themes) To_file() error {
 		if err != nil {
 			return err
 		}
+		if k.Path == ""{
+			k.Path = "/home/f/.config/nvim/lua/themeinator/known_themes.json"
+		}
 		themes_file, err := os.Create(k.Path)
 		if err != nil {
 			return err

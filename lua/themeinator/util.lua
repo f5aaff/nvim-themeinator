@@ -1,6 +1,32 @@
 local M = {}
 
+local json = require("themeinator.json")
 
+-- Function to read a JSON file and decode it into a Lua table
+function M.decode_json_file(filename)
+    -- Open the file in read mode
+    local file = io.open(filename, "r")
+    if not file then
+        error("Could not open file: " .. filename)
+    end
+
+    -- Read the entire file content
+    local file_content = file:read("*a")
+    file:close()
+
+    -- Decode JSON content into a Lua table
+    local lua_table, pos, err = json.decode(file_content)
+    if err then
+        error("Error parsing JSON: " .. err)
+    end
+
+    return lua_table
+end
+
+-- Usage example
+--  local filename = "path/to/your_file.json"  -- Update this path to your JSON file
+--  local data = decode_json_file(filename)
+--  print(vim.inspect(data))  -- Use `vim.inspect` for a readable output in Neovim
 
 
 -- Function to add a folder to the runtime path

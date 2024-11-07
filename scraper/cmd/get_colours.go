@@ -22,6 +22,10 @@ var getColoursCmd = cobra.Command{
 		if err != nil {
 			fmt.Println("error:", err.Error())
 		}
+		err = kt.To_file()
+		if err != nil {
+			fmt.Printf("error saving known themes to file:%s",err.Error())
+		}
 		fmt.Printf("%d themes recorded to file %s\n",len(kt.Themes),kt.Path)
 	},
 }

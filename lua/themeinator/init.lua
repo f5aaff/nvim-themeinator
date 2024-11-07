@@ -2,7 +2,6 @@ local M = {}
 
 local ui = require("themeinator.ui")
 local thememan = require("themeinator.thememan")
-local util = require("themeinator.util")
 local config_path = "/home/f/.config/nvim/lua/themeinator/config.lua"
 
 -- Default configuration
