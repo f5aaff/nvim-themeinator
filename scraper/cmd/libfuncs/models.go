@@ -15,14 +15,16 @@ type Theme struct {
 }
 type Known_themes struct {
 	Path   string
-	Themes map[string]Theme `json:"themes"`
+	Themes map[string]Theme
+	Themes_list []Theme `json:"Themes_list"`
 }
 
 func (k *Known_themes) From_file(known_themes_path string) error {
 
 	// attempt to open existing Known_themes,
 	// if it errors, or cannot be unmarshalled, instantiate a new kt struct.
-	kt := Known_themes{Themes: make(map[string]Theme)}
+	//kt := Known_themes{Themes: make(map[string]Theme)}
+	kt := Known_themes{Themes: make(map[string]Theme),Themes_list: make([]Theme,0)}
 
 	kt_file, err := os.Open(known_themes_path)
 	if err != nil {

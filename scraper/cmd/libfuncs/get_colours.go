@@ -130,6 +130,7 @@ func GetColors(kt *Known_themes, ghLink string) error {
 					t.Downloaded = true
 					t.Path = path
 					kt.Themes[name] = t
+					kt.Themes_list = append(kt.Themes_list, t)
 				}
 				kt.Themes[name] = t
 			}
@@ -138,6 +139,7 @@ func GetColors(kt *Known_themes, ghLink string) error {
 				t.Downloaded = true
 				t.Path = path
 				kt.Themes[name] = t
+				kt.Themes_list = append(kt.Themes_list, t)
 			}
 			// if it is in the map, but the link is old, update it
 			if ok && kt.Themes[name].Link != rawURL {
@@ -149,6 +151,7 @@ func GetColors(kt *Known_themes, ghLink string) error {
 					t.Path = path
 				}
 				kt.Themes[name] = t
+				kt.Themes_list = append(kt.Themes_list, t)
 			}
 		}
 	})

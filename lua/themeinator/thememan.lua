@@ -1,6 +1,5 @@
 local M = {}
 local util = require("themeinator.util")
-local json = require("themeinator.json")
 
 -- Function to read the themes from the directory
 function M.read_themes_from_directory(config)
@@ -10,7 +9,7 @@ function M.read_themes_from_directory(config)
 
     if vim.fn.isdirectory(dir) == 0 then
         print("Themes directory does not exist: " .. dir)
-        return items  -- Return empty items if directory does not exist
+        return items -- Return empty items if directory does not exist
     end
 
     local theme_files = vim.fn.readdir(dir)
@@ -21,7 +20,7 @@ function M.read_themes_from_directory(config)
     -- Loop through each theme file
     for _, file in ipairs(theme_files) do
         table.insert(items, file)
-        vim.opt.runtimepath:append(file)  -- Make sure file path is correct
+        vim.opt.runtimepath:append(file) -- Make sure file path is correct
     end
 
     -- Add a fallback message if no themes were found
@@ -36,12 +35,12 @@ function M.get_known_themes(config)
     local kt_path = vim.fn.expand(config.known_themes)
     local known_themes = util.decode_json_file(kt_path)
     if known_themes then
+        vim.notify(known_themes.Themes_list[1].name,vim.log.levels.INFO)
         return known_themes
     else
         return nil
     end
 end
-
 
 -- Function to evaluate and load the colorscheme if it matches a file in the folder
 function M.apply_theme(config, config_path, colorscheme_name)
