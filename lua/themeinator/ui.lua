@@ -37,7 +37,7 @@ function M.open_search_window(items, on_select)
     -- Autocommand to filter and update results on every text change
     vim.api.nvim_create_autocmd("TextChangedI", {
         buffer = input_buf,
-        callback = function() M.update_results(items) end
+        callback = function() M.update_results() end
     })
 
     -- Key mappings for navigation and selection
@@ -54,28 +54,36 @@ function M.open_search_window(items, on_select)
     vim.api.nvim_buf_set_keymap(input_buf, "n", "<Esc>",
         "<Cmd>lua require('themeinator.ui').close_window()<CR>",
         { noremap = true, silent = true })
+
+    -- Bind 'ctrl+d' key to download the selected theme
+    vim.api.nvim_buf_set_keymap(input_buf, "i", "<C-d>",
+        "<Cmd>lua require('themeinator.ui').download_selected_theme()<CR>",
+        { noremap = true, silent = true })
 end
 
--- Function to update the filtered results based on input
-function M.update_results(items)
+function M.update_results()
     local query = vim.api.nvim_get_current_line()
+    local config = require("themeinator.init").get_config()
+    local known_themes = require("themeinator.thememan").get_known_themes(config).Themes
+
     local filtered_items = {}
-    if query ~= "" then
-        -- Filter items based on query
-        for _, item in ipairs(items) do
-            if item:lower():match(query:lower()) then
-                table.insert(filtered_items, item)
-            end
-        end
-    else
-        for _, item in ipairs(items) do
-            table.insert(filtered_items, item)
+
+    for _, theme in pairs(known_themes) do
+        if query == "" or theme.name:lower():match(query:lower()) then
+            table.insert(filtered_items, string.format(
+                "%s (Downloaded: %s, Known: %s)",
+                theme.name,
+                theme.downloaded and "Yes" or "No",
+                theme.known and "Yes" or "No"
+            ))
         end
     end
-    -- Reset selected index if results have changed
-    selected_index = 1
 
-    -- Show results in the results window
+    if #filtered_items == 0 then
+        table.insert(filtered_items, "No known themes found.")
+    end
+
+    selected_index = 1
     M.show_results(filtered_items)
 end
 
@@ -151,24 +159,43 @@ function M.select_current_item()
     M.close_window()
 end
 
+function M.download_selected_theme()
+    local selected = vim.api.nvim_buf_get_lines(result_buf, selected_index - 1, selected_index, false)[1]
+    if not selected or selected == "No known themes found." then
+        vim.notify("No theme selected to download.", vim.log.levels.WARN)
+        return
+    end
+
+    local theme_name = selected:match("^(.-) %(")
+    local config = require("themeinator.init").get_config()
+    local known_themes = require("themeinator.thememan").get_known_themes(config).Themes
+
+    local theme = known_themes[theme_name]
+    if theme and not theme.downloaded then
+        thememan.download_theme(theme)
+        theme.downloaded = true -- Mark theme as downloaded after successful download
+        vim.notify("Theme downloaded: " .. theme_name, vim.log.levels.INFO)
+    else
+        vim.notify("Theme already downloaded: " .. theme_name, vim.log.levels.WARN)
+    end
+
+    -- Refresh the results to update the downloaded status
+    M.update_results()
+end
+
 -- Function to update the window to reflect the currently selected item
 local function update_window(items)
     if not buf or not vim.api.nvim_buf_is_valid(buf) then
         print("Buffer is not valid")
         return
     end
-    -- Ensure items list is valid
+
     if not items or #items == 0 then
-        items = { "No themes found." .. #items }
+        items = { "No themes found." }
     end
 
-    -- Set the theme items in the buffer
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, items)
-
-    -- Clear previous highlighting
     vim.api.nvim_buf_clear_namespace(buf, -1, 0, -1)
-
-    -- Highlight the selected item
     vim.api.nvim_buf_add_highlight(buf, -1, "Visual", selected_item - 1, 0, -1)
 end
 
@@ -308,7 +335,6 @@ function M.open_window(items)
         { noremap = true, silent = true })
     vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ":lua require('themeinator.ui').close_window()<CR>",
         { noremap = true, silent = true })
-
     ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_win_set_option(win_id, 'winhl', 'Normal:NormalFloat,FloatBorder:FloatBorder')
 end

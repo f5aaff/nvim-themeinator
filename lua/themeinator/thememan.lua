@@ -13,17 +13,18 @@ function M.read_themes_from_directory(config)
     end
 
     local theme_files = vim.fn.readdir(dir)
-
-    -- Ensure the directory is added to runtimepath
     util.add_folder_to_runtimepath(dir)
 
-    -- Loop through each theme file
     for _, file in ipairs(theme_files) do
-        table.insert(items, file)
-        vim.opt.runtimepath:append(file) -- Make sure file path is correct
+        local theme_name = file:match("^(.*)%.%w+$")
+        local theme_info = known_themes and known_themes.Themes[theme_name] or {}
+        local status = string.format("%s (Downloaded: %s, Known: %s)",
+            theme_name,
+            theme_info.downloaded and "Yes" or "No",
+            theme_info.known and "Yes" or "No")
+        table.insert(items, status)
     end
 
-    -- Add a fallback message if no themes were found
     if #items == 0 then
         table.insert(items, "No themes found.")
     end
@@ -35,7 +36,7 @@ function M.get_known_themes(config)
     local kt_path = vim.fn.expand(config.known_themes)
     local known_themes = util.decode_json_file(kt_path)
     if known_themes then
-        vim.notify(known_themes.Themes_list[1].name,vim.log.levels.INFO)
+        vim.notify(known_themes.Themes_list[1].name, vim.log.levels.INFO)
         return known_themes
     else
         return nil
@@ -57,6 +58,10 @@ function M.apply_theme(config, config_path, colorscheme_name)
 
     -- Loop through the theme files and match the provided colorscheme name
     for _, file in ipairs(theme_files) do
+        colorscheme_name = colorscheme_name:gsub("%s.*", "")
+        if not colorscheme_name:match("%.vim$") then
+            colorscheme_name = colorscheme_name .. ".vim" -- Append ".vim" if it doesn't already end with it
+        end
         -- If the colorscheme name matches the file
         if colorscheme_name == file then
             local name = file:match("^(.*)%.%w+$")
@@ -74,6 +79,15 @@ function M.apply_theme(config, config_path, colorscheme_name)
     -- If no matching file is found
     vim.notify("Colorscheme not found: " .. colorscheme_name, vim.log.levels.WARN)
     return false
+end
+
+function M.download_theme(theme)
+    vim.notify("theme:" .. theme.name .. "link:" .. theme.link, vim.log.levels.INFO)
+    local handle = io.popen("./themeinator download " .. theme.name)
+    local result = handle:read("*a") -- Read the output
+    handle:close()
+
+    print(result)
 end
 
 return M
