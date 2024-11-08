@@ -118,6 +118,7 @@ func GetColors(kt *Known_themes, ghLink string) error {
 			// create a new Theme struct and add it
 			path := "/home/f/.config/nvim/colors/" + name + ".vim"
 			t, ok := kt.Themes[name]
+			t.Known = true
 			if !ok {
 				t := Theme{
 					Name:       name,

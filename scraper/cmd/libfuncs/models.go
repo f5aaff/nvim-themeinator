@@ -12,6 +12,7 @@ type Theme struct {
 	Downloaded bool   `json:"downloaded"`
 	Link       string `json:"link"`
 	Path       string `json:"path"`
+	Known	   bool `json:"known"`
 }
 type Known_themes struct {
 	Path   string

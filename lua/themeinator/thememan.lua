@@ -5,7 +5,7 @@ local util = require("themeinator.util")
 function M.read_themes_from_directory(config)
     local items = {}
     local dir = vim.fn.expand(config.themes_directory)
-
+    local known_themes = M.get_known_themes(config)
 
     if vim.fn.isdirectory(dir) == 0 then
         print("Themes directory does not exist: " .. dir)
