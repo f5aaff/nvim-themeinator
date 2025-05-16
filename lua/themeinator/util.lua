@@ -28,6 +28,24 @@ end
 --  local data = decode_json_file(filename)
 --  print(vim.inspect(data))  -- Use `vim.inspect` for a readable output in Neovim
 
+-- ensures the themes file is present.
+function M.ensure_themes_file(file_path)
+  if vim.fn.filereadable(file_path) == 0 then
+    vim.fn.mkdir(file_path, "p")
+    local default = {
+    }
+    local encoded = vim.fn.json_encode(default)
+    local f = io.open(file_path, "w")
+    if f then
+      f:write(encoded)
+      f:close()
+      vim.notify("Created default themes.json", vim.log.levels.INFO)
+    else
+      vim.notify("Failed to create themes.json", vim.log.levels.ERROR)
+    end
+  end
+end
+
 
 -- Function to add a folder to the runtime path
 function M.add_folder_to_runtimepath(folder_path)
