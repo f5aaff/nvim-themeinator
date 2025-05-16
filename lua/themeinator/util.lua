@@ -31,7 +31,6 @@ end
 -- ensures the themes file is present.
 function M.ensure_themes_file(file_path)
   if vim.fn.filereadable(file_path) == 0 then
-    vim.fn.mkdir(file_path, "p")
     local default = {
     }
     local encoded = vim.fn.json_encode(default)
