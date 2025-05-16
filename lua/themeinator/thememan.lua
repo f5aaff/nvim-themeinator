@@ -34,7 +34,6 @@ end
 
 function M.get_known_themes(config)
     local kt_path = vim.fn.expand(config.known_themes)
-    util.ensure_themes_file(kt_path)
     local known_themes = util.decode_json_file(kt_path)
     if known_themes then
         vim.notify(known_themes.Themes_list[1].name, vim.log.levels.INFO)
