@@ -8,15 +8,20 @@ local buf, win_id
 local input_buf, input_win_id, result_buf, result_win_id
 local selected_index = 1 -- Keeps track of the currently selected item
 
+local results_win_config = {}
+
 -- Function to open the main input window for filtering items
 function M.open_search_window(items, on_select)
     selected_index = 1 -- Reset selection index each time the window opens
     -- Create a buffer for the input window
     input_buf = vim.api.nvim_create_buf(false, true)
-
+    M.update_results()
     local width, height = 40, 3
-    local row, col = math.floor((vim.o.lines - height) / 2 - 1), math.floor((vim.o.columns - width) / 2)
 
+    local col = math.floor((vim.o.columns - width) / 2)
+
+    -- position the input window just above the results window
+    local row = (results_win_config.row or math.floor((vim.o.lines - height) / 2)) - height - 1
     input_win_id = vim.api.nvim_open_win(input_buf, true, {
         style = "minimal",
         relative = "editor",
@@ -33,7 +38,7 @@ function M.open_search_window(items, on_select)
     ---@diagnostic disable-next-line: deprecated
     vim.api.nvim_buf_set_option(input_buf, "modifiable", true)
     vim.api.nvim_buf_set_lines(input_buf, 0, -1, false, { "" })
-
+    M.update_results()
     -- Autocommand to filter and update results on every text change
     vim.api.nvim_create_autocmd("TextChangedI", {
         buffer = input_buf,
@@ -126,6 +131,7 @@ function M.show_results(filtered_items)
         vim.api.nvim_buf_set_lines(result_buf, 0, -1, false, filtered_items)
     end
 
+    results_win_config = { row = row, col = col, width = win_width, height = win_height }
     -- Highlight the currently selected item
     M.highlight_selected_item()
 end
@@ -134,6 +140,10 @@ end
 function M.highlight_selected_item()
     vim.api.nvim_buf_clear_namespace(result_buf, -1, 0, -1)
     vim.api.nvim_buf_add_highlight(result_buf, -1, "Visual", selected_index - 1, 0, -1)
+
+    if result_win_id and vim.api.nvim_win_is_valid(result_win_id) then
+        vim.api.nvim_win_set_cursor(result_win_id, { selected_index, 0 })
+     end
 end
 
 -- Function to move selection up or down
